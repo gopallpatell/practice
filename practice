@@ -1,13 +1,12 @@
-
 provider "aws" {
-  region     = "us-east-1"
+  region     = "ap-south-1"
   access_key = ""
   secret_key = ""
 }
 
 
 variable "server_names" {
-  default = ["app-server-1", "app-server-2", "db-server-1"]
+  default = ["JenkinMaster", "Jenkin-SlaveNode", "Kubernetes-Master", "Kubernetes-WorkerNode", "Ansible-Master"]
 }
 
 # Create VPC
@@ -25,6 +24,7 @@ resource "aws_vpc" "myvpc9" {
 
 resource "aws_subnet" "mysubnet9" {
   vpc_id     = aws_vpc.myvpc9.id
+  availability_zone = "ap-south-1a"
   cidr_block = "10.0.1.0/24"
 
   tags = {
@@ -95,12 +95,12 @@ egress {
 
 resource "aws_instance" "servers"{
   for_each      =   toset(var.server_names) 
-  ami           = "ami-005fc0f236362e99f"
+  ami           = "ami-09b0a86a2c84101e1"
   instance_type = "t2.micro"
   associate_public_ip_address = true
   subnet_id = aws_subnet.mysubnet9.id
   vpc_security_group_ids = [aws_security_group.mysg9.id]
-  key_name = "jen"
+  key_name = "test"
   
   tags = {
     Name = each.key
