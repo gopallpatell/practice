@@ -1,0 +1,19 @@
+provider "aws" {
+  region = "us-east-1"
+}
+
+# Define a variable containing a list of server names
+variable "server_names" {
+  default = ["app-server-1", "app-server-2", "db-server-1"]
+}
+
+# Use for_each to create instances with different names
+resource "aws_instance" "servers" {
+  for_each      = toset(var.server_names)  # Creates a resource for each element in the list
+  ami           = "ami-0c55b159cbfafe1f0"  # Replace with your own AMI ID
+  instance_type = "t2.micro"               # Instance type
+
+  tags = {
+    Name = each.key  # Each instance gets a unique name from the list
+  }
+}
