@@ -6,70 +6,70 @@ provider "aws" {
 
 
 variable "server_names" {
-  default = ["JenkinMaster", "Jenkin-SlaveNode", "Kubernetes-Master", "Kubernetes-WorkerNode", "Ansible-Master"]
+  default = ["Master-of-Master", "Jenkins-SAlave-Node", "Test-Server", "Monitering-Server"]
 }
 
 # Create VPC
 
-resource "aws_vpc" "myvpc9" {
+resource "aws_vpc" "myvpc" {
   cidr_block       = "10.0.0.0/16"
   instance_tenancy = "default"
 
   tags = {
-    Name = "myvpc9"
+    Name = "myvpc"
   }
 }
 
 # Create Subnet 
 
-resource "aws_subnet" "mysubnet9" {
-  vpc_id     = aws_vpc.myvpc9.id
+resource "aws_subnet" "mysubnet" {
+  vpc_id     = aws_vpc.myvpc.id
   availability_zone = "ap-south-1a"
   cidr_block = "10.0.1.0/24"
 
   tags = {
-    Name = "mysubnet9"
+    Name = "mysubnet"
   }
 }
 
 # Internet Gateway
 
-resource "aws_internet_gateway" "mygw9" {
-  vpc_id = aws_vpc.myvpc9.id
+resource "aws_internet_gateway" "mygw" {
+  vpc_id = aws_vpc.myvpc.id
 
   tags = {
-    Name = "mygw9"
+    Name = "mygw"
   }
 }
 
 # Route Table
 
-resource "aws_route_table" "myrt9" {
-  vpc_id = aws_vpc.myvpc9.id
+resource "aws_route_table" "myrt" {
+  vpc_id = aws_vpc.myvpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.mygw9.id
+    gateway_id = aws_internet_gateway.mygw.id
   }
 
   tags = {
-    Name = "myrt9"
+    Name = "myrt"
   }
 }
 
 # Route Table Association
 
-resource "aws_route_table_association" "myrta9" {
-  subnet_id      = aws_subnet.mysubnet9.id
-  route_table_id = aws_route_table.myrt9.id
+resource "aws_route_table_association" "myrta" {
+  subnet_id      = aws_subnet.mysubnet.id
+  route_table_id = aws_route_table.myrt.id
 }
 
 # Security Groups
 
-resource "aws_security_group" "mysg9" {
-  name        = "mysg9"
+resource "aws_security_group" "mysg" {
+  name        = "mysg"
   description = "Allow All traffic"
-  vpc_id      = aws_vpc.myvpc9.id
+  vpc_id      = aws_vpc.myvpc.id
 
    ingress {
     from_port   = 0
@@ -87,7 +87,7 @@ egress {
   
 
   tags = {
-    Name = "mysg9"
+    Name = "mysg"
   }
 }
 
@@ -96,13 +96,342 @@ egress {
 resource "aws_instance" "servers"{
   for_each      =   toset(var.server_names) 
   ami           = "ami-09b0a86a2c84101e1"
-  instance_type = "t2.micro"
+  instance_type = "t2.medium"
   associate_public_ip_address = true
-  subnet_id = aws_subnet.mysubnet9.id
-  vpc_security_group_ids = [aws_security_group.mysg9.id]
-  key_name = "test"
+  subnet_id = aws_subnet.mysubnet.id
+  vpc_security_group_ids = [aws_security_group.mysg.id]
+  key_name = "gp"
   
   tags = {
     Name = each.key
   }
 }
+
+################################################## MOM ##########################################################3
+
+
+su
+
+vi master-server.sh 
+
+  #!/bin/bash
+
+  echo "installing java"
+
+  apt update -y
+  apt install git -y
+  apt install openjdk-17-jdk -y
+  apt install maven -y
+
+  echo "java Installed"
+
+  echo "installing docker"
+
+  apt install docker.io -y
+
+  echo "Docker Installed"
+
+  echo "installing java"
+
+  echo "installing ansible"
+  sudo apt update
+  sudo apt install software-properties-common
+  sudo add-apt-repository --yes --update ppa:ansible/ansible
+  sudo apt install ansible -y
+
+  echo "installing jenkins"
+  sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+  /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update
+sudo apt-get install jenkins -y
+  
+  
+ sh master-server.sh
+  
+#####add Jenkins (user) to the sudo group
+
+sudo usermod -aG sudo jenkins
+
+sudo systemctl restart jenkins
+
+#####add docker to jenkins group
+
+sudo usermod -aG  docker jenkins 
+
+sudo systemctl restart jenkins
+
+reboot instance
+
+
+access jenkins thru browser 
+
+
+
+
+########################################### slave node ##################################################
+
+#Configure Slave Node1 for Java Maven App. :
+
+
+sudo -i
+
+apt update -y 
+
+Install Java ::
+
+sudo apt update -y 
+sudo apt install openjdk-17-jre -y
+java -version						
+
+Install GIT :
+
+sudo apt install git -y
+
+Install Maven - Build Tool :
+
+sudo apt install maven -y 
+
+Create User in Jenkins Slave Machine & Create SSH Keys 
+
+SSH Keys --> is composed of public and private keys 
+
+#Add User : 
+
+useradd devopsadmin -s /bin/bash -m -d /home/devopsadmin
+
+su - devopsadmin
+
+ssh-keygen -t ecdsa -b 521										#ubuntu 22.04 or higher version of ubuntu				
+
+
+ls ~/.ssh 
+
+#You should see following two files:
+
+#id_ecdsa - private key
+#id_ecdsa.pub - public
+
+
+#cat id_rsa.pub > authorized_keys
+
+cat id_ecdsa.pub > authorized_keys
+
+chmod 600 /home/devopsadmin/.ssh/*
+
+
+
+install docker 
+
+apt install docker.io -y
+
+
+usermod -aG docker devopsadmin
+
+
+	
+
+Login to Jenkins - Manage Jenkins - Attach the Slave Node to jenkins Master
+
+	Goto to Manage Jenkins 
+		Select Nodes 
+			On Nodes Dashboard, Click on New Node
+				Give Node Name, and choose permanent ag
+
+
+
+
+################## on ansible controller ##############
+
+#Add User in Ansible Controller : 
+
+useradd devopsadmin -s /bin/bash -m -d /home/devopsadmin
+
+#useradd devopsadmin
+
+su - devopsadmin	
+
+#ssh-keygen -t rsa -b 1024 -m PEM
+
+#ssh-keygen -R rsa -b 1024 -m PEM
+ssh-keygen -t ecdsa -b 521										#ubuntu 22.04 or higher version of ubuntu				
+
+ls ~/.ssh 
+
+#You should see following two files:
+
+#id_ecdsa - private key
+#id_ecdsa.pub - public
+
+cat id_ecdsa.pub > authorized_keys
+
+chmod 600 /home/ansibleadmin/.ssh/*
+
+
+################## on test server ##################
+
+#Add User in Ansible Nodes : 
+
+sudo -i
+
+apt update -y 
+
+useradd ansibleadmin -s /bin/bash -m -d /home/ansibleadmin 
+
+passwd ansibleadmin
+
+#Enter New Password:
+#Confirm Password:
+
+#Goto:
+
+vi /etc/ssh/sshd_config
+
+#Enable Password Authentication to Yes and save the file
+#Execute Below command to update the changes.
+
+service ssh reload
+
+#As a root user edit below file:
+
+$ visudo
+
+#add the below mentioned line in the file and save it.
+ 
+ansibleadmin ALL=(ALL) NOPASSWD: ALL
+
+su - ansibleadmin
+
+ls -a 
+
+create .ssh directory
+
+
+vi authorized_keys
+
+#paste the id_ecdsa.pub of devopsadmin user from controller machine to authorized_keys file in Ansible Node1 
+
+chmod 600 /home/ansibleadmin/.ssh/*
+
+
+############### on test server ####################
+
+install docker 
+
+apt install docker.io -y
+
+
+usermod -aG docker ansibleadmin
+
+
+
+# Use the private IP addr. of AN1 and AN2
+
+ssh ansibleadmin@172.31.34.144
+ssh ansibleadmin@172.31.45.232
+
+chown -R devopsadmin:devopsadmin /etc/ansible    as a root user
+
+
+###update vi etc/ansible/hosts
+
+
+[testnodes]
+samplenode1 ansible_ssh_host=172.31.34.144 ansible_ssh_user=ansibleadmin
+samplenode2 ansible_ssh_host=172.31.45.232 ansible_ssh_user=ansibleadmin
+
+
+ansible testnodes -m ping      as devopsadmin user
+
+
+
+
+
+go to tools and enable ansible tool 
+
+then add master node in ssh publish
+
+snippet generator (invoke ansible playbook)
+
+
+
+############ on test server ###########
+
+
+
+ssh-keygen -t ecdsa -b 521										#ubuntu 22.04 or higher version of ubuntu				
+
+ls ~/.ssh 
+
+#You should see following two files:
+
+#id_ecdsa - private key
+#id_ecdsa.pub - public
+
+cat id_ecdsa.pub > authorized_keys
+
+
+
+
+
+
+
+
+
+
+###############################################################################################################################
+
+pipeline {
+     agent any
+
+	environment {	
+		DOCKERHUB_CREDENTIALS=credentials('dockerhub-cred')
+	}
+		
+    stages {
+        stage('SCM_Checkout') {
+            steps {
+                echo 'Perform SCM Checkout'
+                git 'https://github.com/gopallpatell/star-agile-banking-finance.git'
+            }
+        }
+        stage('Application Build') {
+            steps {
+                echo 'Perform Application Build'
+                sh 'mvn clean package'
+            }
+        }
+        stage('Docker Build') {
+            steps {
+                echo 'Perform Docker Build'
+				sh "docker build -t gopallpatell/banking:v1.0 ."
+				sh 'docker image list'
+            }
+        }
+        stage('Login to Dockerhub') {
+            steps {
+                echo 'Login to DockerHub'				
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+                
+            }
+        }
+        stage('Publish the Image to Dockerhub') {
+            steps {
+                echo 'Publish to DockerHub'
+				sh "docker push gopallpatell/banking:v1.0"                
+            }
+        }
+         stage('deploy') {
+            steps {
+         ansiblePlaybook become: true, becomeUser: 'ansibleadmin', credentialsId: 'slave1', disableHostKeyChecking: true, installation: 'ansible', inventory: '/etc/ansible/hosts' , playbook: 'ansible-playbook.yml', sudoUser: null, vaultTmpPath: ''
+            }
+         }
+         
+        
+    }
+}
+1 - create 
+
+  
